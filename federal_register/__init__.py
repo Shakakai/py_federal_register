@@ -1,12 +1,12 @@
-import urllib2, json
+import urllib2, json, datetime
 
 def __fetch__(url):
-    #try:
-    result = urllib2.urlopen(url)
-    return json.loads(result.read())
-    #except:
-    #    raise Exception("Could not load agency list.")
-    #
+    try:
+        result = urllib2.urlopen(url)
+        return json.loads(result.read())
+    except:
+        raise Exception("Could not load agency list.")
+    
 
 AGENCY_LIST_ENDPOINT = "http://api.federalregister.gov/v1/agencies.json"
 AGENCY_ENDPOINT = "http://api.federalregister.gov/v1/agencies/%d.json"
@@ -30,12 +30,14 @@ class Agency(object):
         return Agency(raw)
     
     def __init__(self, raw):
-        self.html_url = raw['url']
-        self.description = raw['description']
-        self.name = raw['name']
-        self.id = raw['id']
-        self.short_name = raw['short_name']
-        self._recent_articles_url = raw['recent_articles_url']
+        props = ['url', 'description', 'name', 'id', 'short_name', 'recent_articles_url']
+        for prop in props:
+            if prop in raw:
+                setattr(self, prop, raw[prop])
+            else:
+                setattr(self, prop, None)
+            
+        
     
     @property
     def recent_articles(self):
@@ -43,7 +45,7 @@ class Agency(object):
         Returns the agencies most recent documents in the federal register.
         '''
         article_list = []
-        raw_list = __fetch__(self._recent_articles_url)
+        raw_list = __fetch__(self.recent_articles_url)
         if "results" in raw_list:
             for raw_article in raw_list['results']:
                 article = Article(raw_article)
@@ -54,42 +56,6 @@ class Agency(object):
 
 
 class Article(object):
-    '''
-    {
-    mods_url: "http://www.gpo.gov/fdsys/granule/FR-1998-03-11/98-6298/mods.xml"
-    effective_on: null
-    type: "Notice"
-    action: "Notice of public hearings."
-    title: "Public Hearings Notice"
-    cfr_refernces: [ ]
-    document_number: "98-6298"
-    end_page: 11872
-    publication_date: "1998-03-11"
-    volume: 63
-    abstract: "The Commission on Structural Alternatives for the Federal Courts of Appeals has scheduled six public hearings to allow interested persons to comment on the Commission's work. The hearings will be in the following cities. The precise times and locations will be announced later."
-    full_text_xml_url: "http://www.federalregister.gov/articles/xml/986/298.xml"
-    start_page: 11872
-    docket_id: null
-    html_url: "http://www.federalregister.gov/articles/1998/03/11/98-6298/public-hearings-notice"
-    abstract_html_url: "http://www.federalregister.gov/articles/html/abstract/986/298.html"
-    dates: null
-    pdf_url: "http://www.gpo.gov/fdsys/pkg/FR-1998-03-11/pdf/98-6298.pdf"
-    body_html_url: "http://www.federalregister.gov/articles/html/full_text/986/298.html"
-    comments_close_on: null
-    regulation_id_numbers: [ ]
-    -agencies: [
-    -{
-    url: "http://www.federalregister.gov/agencies/commission-on-structural-alternatives-for-the-federal-courts-of-appeals"
-    json_url: "http://api.federalregister.gov/v1/agencies/68.json"
-    name: "Commission on Structural Alternatives for the Federal Courts of Appeals"
-    id: 68
-    raw_name: "COMMISSION ON STRUCTURAL ALTERNATIVES FOR THE FEDERAL COURTS OF APPEALS"
-    }
-    ]
-    }
-    
-    '''
-    
     
     @classmethod
     def by_id(clz, article_id):
@@ -98,9 +64,10 @@ class Article(object):
     
     @classmethod
     def search(clz, query):
-        raw = __fetch__("%s?%s" % (SEARCH_ENDPOINT, query))
+        url = "%s?%s" % (SEARCH_ENDPOINT, query)
+        raw = __fetch__(url)
         article_list = []
-        for raw_article in raw:
+        for raw_article in raw["results"]:
             article = clz(raw_article)
             article_list.append(article)
         return article_list
@@ -116,6 +83,30 @@ class Article(object):
                 setattr(self, prop, raw[prop])
             else:
                 setattr(self, prop, None)
+        
+        date_props = ["publication_date"]
+        for prop in date_props:
+            if prop in raw:
+                setattr(self, prop, datetime.datetime.strptime(raw[prop], '%Y-%m-%d'))
+            else:
+                setattr(self, prop, None)
+            
+        
+        self.agencies = []
+        raw_list = raw["agencies"]
+        for raw_agency in raw_list:
+            agency = Agency(raw_agency)
+            self.agencies.append(agency)
+        
+        array_props = ["regulation_id_numbers", "cfr_refernces"]
+        for prop in array_props:
+            current_list = []
+            setattr(self, prop, current_list)
+            if prop in raw:
+                for item in raw[prop]:
+                    current_list.append(item)
+                
+            
         
     
 

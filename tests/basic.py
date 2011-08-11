@@ -28,8 +28,9 @@ class BasicTests(unittest.TestCase):
         self.assertTrue(len(articles) > 0, "No articles for this agency.")
     
     def test_article_search(self):
-        articles = Article.search("conditions[term]=fishing")
+        articles = Article.search().keyword("fishing").execute()
         self.assertTrue(len(articles) > 0, "No articles for this query.")
         article = articles[0]
         self.assertTrue(type(article) is Article, "First article is not proper type.")
+    
     

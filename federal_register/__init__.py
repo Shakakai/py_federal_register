@@ -63,14 +63,8 @@ class Article(object):
         return clz(raw)
     
     @classmethod
-    def search(clz, query):
-        url = "%s?%s" % (SEARCH_ENDPOINT, query)
-        raw = __fetch__(url)
-        article_list = []
-        for raw_article in raw["results"]:
-            article = clz(raw_article)
-            article_list.append(article)
-        return article_list
+    def search(clz):
+        return ArticleQuery()
     
     def __init__(self, raw):
         str_props = ["mods_url", "effective_on", "type", "action", "title",\
@@ -109,5 +103,73 @@ class Article(object):
             
         
     
+
+class ArticleQuery(object):
+    def __init__(self):
+        self.params = []
+    
+    def param(self, p):
+        self.params.append(p)
+    
+    def keyword(self, term):
+        param = "conditions[term]=%s" % term
+        self.param(param)
+        return self
+    
+    def published(self, equal=None, year=None, lte=None, gte=None):
+        if equal is not None:
+            param = "conditions[publication_date][is]=%s" % equal
+        elif year is not None:
+            param = "conditions[publication_date][year]=%s" % year
+        elif lte is not None:
+            param = "conditions[publication_date][lte]=%s" % lte
+        elif gte is not None:
+            param = "conditions[publication_date][gte]=%s" % gte
+        self.param(param)
+        return self
+    
+    def agencies(self, id=None, ids=None):
+        if id is not None:
+            param = "conditions[agency_ids][]=%s" % id
+            self.param(param)
+        elif ids is not None:
+            for id in ids:
+                param = "conditions[agency_ids][]=%s" % id
+                self.param(param)
+        return self
+    
+    def doc_category(self, doc_type):
+        param = "conditions[type]=%s" % doc_type
+        self.param(param)
+        return self
+    
+    def docket_number(self, num):
+        param = "conditions[docket_id]=%s" % num
+        self.param(param)
+        return self
+    
+    def location(self, zip_code, distance):
+        param = "conditions[near][location]=%s&conditions[near][within]=%s" % (zip_code, distance)
+        self.param(param)
+        return self
+    
+    def execute(self):
+        query = "&".join(self.params)
+        url = "%s?%s" % (SEARCH_ENDPOINT, query)
+        raw = __fetch__(url)
+        article_list = []
+        for raw_article in raw["results"]:
+            article = Article(raw_article)
+            article_list.append(article)
+        return article_list
+
+
+
+
+
+
+
+
+
 
 

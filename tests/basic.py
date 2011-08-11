@@ -1,5 +1,5 @@
 import unittest, sys
-from federal_register import agencies, Agency, Article
+from federal_register import agencies, Agency, Article, ArticleQuery
 
 AGENCY_ID = 68
 
@@ -28,7 +28,13 @@ class BasicTests(unittest.TestCase):
         self.assertTrue(len(articles) > 0, "No articles for this agency.")
     
     def test_article_search(self):
-        articles = Article.search().keyword("fishing").execute()
+        articles = ArticleQuery().keyword("fishing").execute()
+        self.assertTrue(len(articles) > 0, "No articles for this query.")
+        article = articles[0]
+        self.assertTrue(type(article) is Article, "First article is not proper type.")
+    
+    def test_article_complex_search(self):
+        articles = ArticleQuery().keyword("fishing").location("90210", "1000").execute()
         self.assertTrue(len(articles) > 0, "No articles for this query.")
         article = articles[0]
         self.assertTrue(type(article) is Article, "First article is not proper type.")

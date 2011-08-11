@@ -62,10 +62,6 @@ class Article(object):
         raw = __fetch__(ARTICLE_ENDPOINT % article_id)
         return clz(raw)
     
-    @classmethod
-    def search(clz):
-        return ArticleQuery()
-    
     def __init__(self, raw):
         str_props = ["mods_url", "effective_on", "type", "action", "title",\
          "document_number", "end_page", "volume", "abstract", "full_text_xml_url",\
